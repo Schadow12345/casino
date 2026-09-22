@@ -20,16 +20,21 @@ import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlparse
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE, "casino.db")
+DB_PATH = os.environ.get("DB_PATH") or os.path.join(BASE, "casino.db")
+INVITE_CODE = os.environ.get("INVITE_CODE", "").strip()   # leer = offene Registrierung
 PORT = int(os.environ.get("PORT", 8000))
 
 START_BALANCE = 1000      # Startguthaben
 DAILY_BONUS = 500         # Tagesbonus
 BONUS_COOLDOWN = 24 * 3600
 RESCUE_AMOUNT = 200       # Notgroschen, wenn man pleite ist
+DAILY_STEP = 100          # Mehr Bonus pro Tag in Folge (bis Tag 10)
+STREAK_WINDOW = 48 * 3600 # So lange darf man den Tagesbonus verpassen, ohne die Serie zu verlieren
+STREAK_PCT = {3: 5, 5: 10, 7: 15, 10: 25}   # Siegesserie: Bonus in % der Einsaetze der Serie
+STREAK_BONUS_CAP = 2000
 
 LOCK = threading.RLock()  # ein Lock fuer alle DB-Operationen (einfach & sicher)
 
@@ -55,6 +60,11 @@ def init_db():
                 balance INTEGER NOT NULL,
                 last_bonus REAL NOT NULL DEFAULT 0,
                 poker_hands INTEGER NOT NULL DEFAULT 0,
+                daily_streak INTEGER NOT NULL DEFAULT 0,
+                best_daily INTEGER NOT NULL DEFAULT 0,
+                win_streak INTEGER NOT NULL DEFAULT 0,
+                best_streak INTEGER NOT NULL DEFAULT 0,
+                streak_stake INTEGER NOT NULL DEFAULT 0,
                 created REAL NOT NULL
             );
             CREATE TABLE IF NOT EXISTS sessions (
@@ -77,8 +87,20 @@ def init_db():
                 state TEXT NOT NULL,
                 PRIMARY KEY (user_id, game)
             );
+            CREATE TABLE IF NOT EXISTS shared_kv (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
             """
         )
+        # Alte Datenbanken (ohne Serien-Spalten) automatisch erweitern
+        have = {r["name"] for r in c.execute("PRAGMA table_info(users)")}
+        for col in ("daily_streak", "best_daily", "win_streak", "best_streak", "streak_stake", "last_wheel"):
+            if col not in have:
+                default = "0" if col != "last_wheel" else "0"
+                c.execute(f"ALTER TABLE users ADD COLUMN {col} INTEGER NOT NULL DEFAULT {default}")
+        if not c.execute("SELECT 1 FROM shared_kv WHERE key='jackpot'").fetchone():
+            c.execute("INSERT INTO shared_kv(key,value) VALUES('jackpot',?)", (str(JACKPOT_SEED),))
 
 
 class ApiError(Exception):
@@ -111,6 +133,32 @@ def log_tx(c, uid, game, net, note=""):
     )
 
 
+def streak_pct(n):
+    if n in STREAK_PCT:
+        return STREAK_PCT[n]
+    return 25 if n > 10 and n % 5 == 0 else 0
+
+
+def record_result(c, uid, game, bet, net):
+    """Siegesserie fortfuehren/beenden. Bonus = Prozent der Einsaetze der Serie (nicht ausnutzbar)."""
+    u = c.execute("SELECT win_streak,best_streak,streak_stake FROM users WHERE id=?", (uid,)).fetchone()
+    ws, best, stake, bonus = u["win_streak"], u["best_streak"], u["streak_stake"], 0
+    if net > 0:
+        ws += 1
+        stake += bet
+        best = max(best, ws)
+        pct = streak_pct(ws)
+        if pct:
+            bonus = min(STREAK_BONUS_CAP, max(1, stake * pct // 100))
+    elif net < 0:
+        ws, stake = 0, 0
+    c.execute("UPDATE users SET win_streak=?,best_streak=?,streak_stake=? WHERE id=?", (ws, best, stake, uid))
+    if bonus:
+        adjust(c, uid, bonus)
+        log_tx(c, uid, "Serie", bonus, f"Siegesserie x{ws}")
+    return {"n": ws, "best": best, "bonus": bonus}
+
+
 def load_state(c, uid, game):
     r = c.execute("SELECT state FROM active_games WHERE user_id=? AND game=?", (uid, game)).fetchone()
     return json.loads(r["state"]) if r else None
@@ -125,6 +173,20 @@ def save_state(c, uid, game, st):
 
 def clear_state(c, uid, game):
     c.execute("DELETE FROM active_games WHERE user_id=? AND game=?", (uid, game))
+
+
+def kv_get(c, key, default="0"):
+    r = c.execute("SELECT value FROM shared_kv WHERE key=?", (key,)).fetchone()
+    return r["value"] if r else default
+
+
+def kv_set(c, key, value):
+    c.execute("INSERT INTO shared_kv(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+              (key, str(value)))
+
+
+def jackpot_amount(c):
+    return int(kv_get(c, "jackpot", str(JACKPOT_SEED)))
 
 
 def check_bet(c, uid, bet, allowed=None, minimum=1):
@@ -163,6 +225,10 @@ SLOT_WEIGHTS = [30, 24, 20, 12, 8, 4, 2]
 SLOT_PAY3 = [11, 17, 25, 50, 110, 280, 900]   # Faktor x Linieneinsatz bei 3 gleichen
 SLOT_PAY2_CHERRY = 1                          # zwei Kirschen von links
 SLOT_BETS = [5, 10, 25, 50, 100, 250]
+JACKPOT_SEED = 2000        # Startwert / Wert, auf den nach einem Treffer zurueckgesetzt wird
+JACKPOT_FEED_PCT = 2       # Prozent jedes Slot-Einsatzes fliesst in den Jackpot
+JACKPOT_CHANCE = 1 / 900   # Chance pro Spin, sobald der Jackpot-Symbol-Sonderfall eintritt (siehe unten)
+WHEEL_PRIZES = [50, 100, 100, 150, 200, 250, 400, 1000]   # Glücksrad: Gewichte = gleich wahrscheinlich, 1000 ist der Jackpot-Slot
 SLOT_LINES = [
     [(0, 0), (0, 1), (0, 2)],
     [(1, 0), (1, 1), (1, 2)],
@@ -193,9 +259,21 @@ def slots_spin(c, uid, data):
             total += amount
             wins.append({"line": i, "symbol": SLOT_SYMBOLS[s[0]], "mult": mult,
                          "amount": amount, "cells": [list(x) for x in cells]})
+    feed = max(1, bet * JACKPOT_FEED_PCT // 100)
+    jackpot = jackpot_amount(c) + feed
+    jackpot_won = 0
+    # Jackpot-Chance: nur moeglich, wenn ohnehin schon alle 3 mittleren Felder "7" zeigen
+    if grid[1][0] == 6 and grid[1][1] == 6 and grid[1][2] == 6 and rng.random() < 0.35:
+        jackpot_won = jackpot
+        jackpot = JACKPOT_SEED
+    kv_set(c, "jackpot", jackpot)
+    total += jackpot_won
     adjust(c, uid, total - bet)
-    log_tx(c, uid, "Slots", total - bet, f"Einsatz {bet}, Gewinn {total}")
+    log_tx(c, uid, "Slots", total - bet, f"Einsatz {bet}, Gewinn {total}" + (f" (Jackpot {jackpot_won}!)" if jackpot_won else ""))
+    streak = record_result(c, uid, "Slots", bet, total - bet)
     return {
+        "jackpot_won": jackpot_won, "jackpot": jackpot,
+        "streak": streak,
         "grid": [[SLOT_SYMBOLS[x] for x in row] for row in grid],
         "wins": wins, "win": total, "bet": bet, "balance": get_balance(c, uid),
     }
@@ -246,7 +324,8 @@ def roulette_spin(c, uid, data):
         results.append({"type": t, "value": v, "amount": a, "won": a * mult})
     adjust(c, uid, payout - total)
     log_tx(c, uid, "Roulette", payout - total, f"Zahl {n}, Einsatz {total}, Gewinn {payout}")
-    return {"number": n, "color": color, "bet": total, "payout": payout,
+    streak = record_result(c, uid, "Roulette", total, payout - total)
+    return {"streak": streak, "number": n, "color": color, "bet": total, "payout": payout,
             "results": results, "balance": get_balance(c, uid)}
 
 
@@ -329,6 +408,7 @@ def bj_finish(c, uid, st):
     if payout:
         adjust(c, uid, payout)
     log_tx(c, uid, "Blackjack", payout - bet, f"{res}, Einsatz {bet}")
+    st["streak"] = record_result(c, uid, "Blackjack", bet, payout - bet)
     st["phase"] = "done"
     st["result"] = res
     st["payout"] = payout
@@ -346,7 +426,7 @@ def bj_view(c, uid, st):
         "dealer": dealer, "dealer_total": bj_value(st["dealer"])[0] if done else bj_card_value(st["dealer"][0]),
         "bots": [{"name": b["name"], "hand": b["hand"], "total": bj_value(b["hand"])[0],
                   "result": b.get("result")} for b in st["bots"]],
-        "result": st.get("result"), "payout": st.get("payout"),
+        "result": st.get("result"), "payout": st.get("payout"), "streak": st.get("streak"),
         "can_double": (not done) and len(st["player"]) == 2 and get_balance(c, uid) >= st["bet"],
         "balance": get_balance(c, uid),
     }
@@ -653,6 +733,7 @@ def p_showdown(c, uid, st):
         adjust(c, uid, payouts[0])
     net = payouts[0] - st["total"][0]
     log_tx(c, uid, "Poker", net, f"Pot {pot}")
+    st["streak"] = record_result(c, uid, "Poker", st["total"][0], net)
     names = " & ".join(SEATS[w] for w in winners)
     if len(winners) > 1:
         verb = "gewinnen"
@@ -726,7 +807,7 @@ def p_view(c, uid, st):
         "to_call": to_call if your_turn else 0,
         "can_raise": can_raise, "raise_size": p_bet_size(st),
         "can_afford_call": to_call <= bal,
-        "log": st["log"][-40:], "net": st.get("net"), "you_won": over and 0 in st["winners"],
+        "log": st["log"][-40:], "net": st.get("net"), "streak": st.get("streak"), "you_won": over and 0 in st["winners"],
         "winners": [SEATS[w] for w in st["winners"]] if over else [],
         "balance": bal,
     }
@@ -794,13 +875,76 @@ def poker_state(c, uid, _data=None):
 
 
 # --------------------------------------------------------------------------
+# WUERFEL (3 Wuerfel, klassisches Sic-Bo-Tischspiel)
+# --------------------------------------------------------------------------
+def dice_roll(c, uid, data):
+    bets = data.get("bets")
+    if not isinstance(bets, list) or not bets or len(bets) > 20:
+        raise ApiError("Platziere mindestens einen Chip.")
+    total = 0
+    clean = []
+    for b in bets:
+        t, v, a = b.get("type"), b.get("value"), b.get("amount")
+        if not isinstance(a, int) or isinstance(a, bool) or a < 1 or a > 100_000:
+            raise ApiError("Ungueltiger Einsatz.")
+        if t == "number" and not (isinstance(v, int) and 1 <= v <= 6):
+            raise ApiError("Ungueltige Zahl.")
+        if t == "triple" and not (isinstance(v, int) and 1 <= v <= 6):
+            raise ApiError("Ungueltiges Tripel.")
+        if t not in ("big", "small", "number", "triple", "any_triple"):
+            raise ApiError("Ungueltige Wette.")
+        total += a
+        clean.append((t, v, a))
+    if total > get_balance(c, uid):
+        raise ApiError("Nicht genug Guthaben.")
+
+    rng = random.SystemRandom()
+    dice = [rng.randint(1, 6) for _ in range(3)]
+    s3 = sum(dice)
+    is_triple = dice[0] == dice[1] == dice[2]
+    payout, results = 0, []
+    for t, v, a in clean:
+        mult = 0
+        if t == "big" and not is_triple and 11 <= s3 <= 17:
+            mult = 2
+        elif t == "small" and not is_triple and 4 <= s3 <= 10:
+            mult = 2
+        elif t == "number":
+            hits = dice.count(v)
+            if hits:
+                mult = 1 + hits
+        elif t == "triple" and dice[0] == dice[1] == dice[2] == v:
+            mult = 151
+        elif t == "any_triple" and is_triple:
+            mult = 31
+        payout += a * mult
+        results.append({"type": t, "value": v, "amount": a, "won": a * mult})
+    adjust(c, uid, payout - total)
+    log_tx(c, uid, "Würfel", payout - total, f"{dice}, Einsatz {total}, Gewinn {payout}")
+    streak = record_result(c, uid, "Würfel", total, payout - total)
+    return {"streak": streak, "dice": dice, "sum": s3, "bet": total, "payout": payout,
+            "results": results, "balance": get_balance(c, uid)}
+
+
+# --------------------------------------------------------------------------
 # Konto, Bonus, Rangliste, Verlauf
 # --------------------------------------------------------------------------
+def daily_amount(streak):
+    return DAILY_BONUS + DAILY_STEP * (min(streak, 10) - 1)
+
+
 def user_info(c, uid):
-    u = c.execute("SELECT username,balance,last_bonus FROM users WHERE id=?", (uid,)).fetchone()
-    wait = max(0, int(u["last_bonus"] + BONUS_COOLDOWN - time.time()))
+    u = c.execute("SELECT username,balance,last_bonus,last_wheel,daily_streak,win_streak,best_streak FROM users WHERE id=?",
+                  (uid,)).fetchone()
+    now = time.time()
+    wait = max(0, int(u["last_bonus"] + BONUS_COOLDOWN - now))
+    wheel_wait = max(0, int(u["last_wheel"] + BONUS_COOLDOWN - now))
+    alive = u["last_bonus"] > 0 and now - u["last_bonus"] <= STREAK_WINDOW
+    dstreak = u["daily_streak"] if alive else 0
     return {"username": u["username"], "balance": u["balance"], "bonus_in": wait,
-            "bonus_amount": DAILY_BONUS, "rescue_amount": RESCUE_AMOUNT}
+            "bonus_amount": daily_amount(dstreak + 1), "daily_streak": dstreak,
+            "win_streak": u["win_streak"], "best_streak": u["best_streak"],
+            "rescue_amount": RESCUE_AMOUNT, "wheel_in": wheel_wait, "wheel_prizes": WHEEL_PRIZES}
 
 
 def make_session(c, uid):
@@ -809,7 +953,13 @@ def make_session(c, uid):
     return token
 
 
+def config(c, _uid, _data=None):
+    return {"invite_required": bool(INVITE_CODE)}
+
+
 def register(c, _uid, data):
+    if INVITE_CODE and not secrets.compare_digest(str(data.get("invite", "")).strip().encode(), INVITE_CODE.encode()):
+        raise ApiError("Der Einladungscode stimmt nicht.", 403)
     name = str(data.get("username", "")).strip()
     pw = str(data.get("password", ""))
     if not re.fullmatch(r"[A-Za-z0-9_äöüÄÖÜß\-]{3,20}", name):
@@ -847,13 +997,37 @@ def me(c, uid, _data=None):
 
 
 def bonus(c, uid, _data):
-    u = c.execute("SELECT last_bonus FROM users WHERE id=?", (uid,)).fetchone()
-    if time.time() - u["last_bonus"] < BONUS_COOLDOWN:
+    u = c.execute("SELECT last_bonus,daily_streak,best_daily FROM users WHERE id=?", (uid,)).fetchone()
+    now = time.time()
+    if now - u["last_bonus"] < BONUS_COOLDOWN:
         raise ApiError("Der Tagesbonus ist noch nicht bereit.")
-    adjust(c, uid, DAILY_BONUS)
-    c.execute("UPDATE users SET last_bonus=? WHERE id=?", (time.time(), uid))
-    log_tx(c, uid, "Bonus", DAILY_BONUS, "Tagesbonus")
+    alive = u["last_bonus"] > 0 and now - u["last_bonus"] <= STREAK_WINDOW
+    streak = u["daily_streak"] + 1 if alive else 1
+    amount = daily_amount(streak)
+    adjust(c, uid, amount)
+    c.execute("UPDATE users SET last_bonus=?,daily_streak=?,best_daily=? WHERE id=?",
+              (now, streak, max(streak, u["best_daily"]), uid))
+    log_tx(c, uid, "Bonus", amount, f"Tagesbonus, Tag {streak} in Folge")
     return user_info(c, uid)
+
+
+def wheel_spin(c, uid, _data):
+    u = c.execute("SELECT last_wheel FROM users WHERE id=?", (uid,)).fetchone()
+    now = time.time()
+    if now - u["last_wheel"] < BONUS_COOLDOWN:
+        raise ApiError("Das Glücksrad ist noch nicht bereit.")
+    prize = random.SystemRandom().choice(WHEEL_PRIZES)
+    adjust(c, uid, prize)
+    c.execute("UPDATE users SET last_wheel=? WHERE id=?", (now, uid))
+    log_tx(c, uid, "Glücksrad", prize, "Tägliches Glücksrad")
+    info = user_info(c, uid)
+    info["prize"] = prize
+    info["prizes"] = WHEEL_PRIZES
+    return info
+
+
+def jackpot_info(c, uid, _data=None):
+    return {"jackpot": jackpot_amount(c)}
 
 
 def rescue(c, uid, _data):
@@ -868,9 +1042,20 @@ def rescue(c, uid, _data):
     return user_info(c, uid)
 
 
-def leaderboard(c, uid, _data=None):
-    rows = c.execute("SELECT username,balance FROM users ORDER BY balance DESC LIMIT 10").fetchall()
-    return {"rows": [dict(r) for r in rows]}
+def leaderboard(c, uid, data=None):
+    kind = (data or {}).get("type", "balance")
+    if kind == "streak":
+        q = "SELECT username, best_streak AS value FROM users WHERE best_streak>0 ORDER BY value DESC, id LIMIT 50"
+    elif kind == "daily":
+        q = "SELECT username, best_daily AS value FROM users WHERE best_daily>0 ORDER BY value DESC, id LIMIT 50"
+    elif kind == "win":
+        q = ("SELECT u.username AS username, MAX(t.delta) AS value FROM transactions t JOIN users u ON u.id=t.user_id "
+             "WHERE t.game IN ('Slots','Roulette','Blackjack','Poker','Würfel') AND t.delta>0 "
+             "GROUP BY u.id ORDER BY value DESC LIMIT 50")
+    else:
+        kind = "balance"
+        q = "SELECT username, balance AS value FROM users ORDER BY value DESC LIMIT 50"
+    return {"type": kind, "rows": [dict(r) for r in c.execute(q).fetchall()]}
 
 
 def history(c, uid, _data=None):
@@ -883,16 +1068,20 @@ def history(c, uid, _data=None):
 
 # Route -> (Funktion, braucht Login)
 ROUTES = {
+    ("GET", "/api/config"): (config, False),
     ("POST", "/api/register"): (register, False),
     ("POST", "/api/login"): (login, False),
     ("POST", "/api/logout"): (logout, True),
     ("GET", "/api/me"): (me, True),
     ("POST", "/api/bonus"): (bonus, True),
+    ("POST", "/api/wheel"): (wheel_spin, True),
+    ("GET", "/api/jackpot"): (jackpot_info, False),
     ("POST", "/api/rescue"): (rescue, True),
-    ("GET", "/api/leaderboard"): (leaderboard, True),
+    ("GET", "/api/leaderboard"): (leaderboard, False),
     ("GET", "/api/history"): (history, True),
     ("POST", "/api/slots/spin"): (slots_spin, True),
     ("POST", "/api/roulette/spin"): (roulette_spin, True),
+    ("POST", "/api/dice/spin"): (dice_roll, True),
     ("POST", "/api/blackjack/start"): (bj_start, True),
     ("POST", "/api/blackjack/action"): (bj_action, True),
     ("GET", "/api/blackjack/state"): (bj_state, True),
@@ -928,6 +1117,8 @@ class Handler(BaseHTTPRequestHandler):
         fn, needs_auth = route
         try:
             data = {}
+            if method == "GET":
+                data = dict(parse_qsl(urlparse(self.path).query))
             if method == "POST":
                 n = int(self.headers.get("Content-Length") or 0)
                 if n > 100_000:
