@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salon Émeraude – Spielgeld-Casino</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Limelight&family=Figtree:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#0b1d1c; --smoke:#132b29; --smoke2:#1a3835; --felt:#0f4a38; --felt2:#0b3a2c;
+  --brass:#d6ad5b; --brass2:#f0d38f; --ivory:#f5edda; --ruby:#b02a37; --mute:#9db3ab;
+  --font-d:'Limelight','Didot','Bodoni MT',Georgia,serif;
+  --font-b:'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --cw:64px; --ch:92px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--night);color:var(--ivory);font-family:var(--font-b);font-size:16px;line-height:1.45}
+body{min-height:100vh;background:
+  radial-gradient(1200px 500px at 50% -10%,#173c39 0%,transparent 70%),var(--night)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--brass2);outline-offset:2px}
+.hidden{display:none!important}
+h1,h2,h3{font-family:var(--font-d);font-weight:400;margin:0;letter-spacing:.02em}
+h2{font-size:1.9rem;color:var(--brass2)}
+.muted{color:var(--mute)}
+
+/* ---------- Login ---------- */
+#auth{min-height:100vh;display:grid;place-items:center;padding:24px}
+.authbox{width:min(420px,100%);background:var(--smoke);border:1px solid #2c524d;border-radius:14px;padding:34px 30px;
+  box-shadow:0 0 0 6px var(--night),0 0 0 7px var(--brass)}
+.authbox .logo{font-family:var(--font-d);font-size:2.5rem;line-height:1.05;color:var(--brass2);text-align:center}
+.authbox .sub{text-align:center;color:var(--mute);margin:8px 0 24px}
+label{display:block;font-size:.9rem;color:var(--mute);margin:14px 0 6px}
+input[type=text],input[type=password]{width:100%;padding:12px 14px;border-radius:8px;border:1px solid #33605a;background:#0d2321;color:var(--ivory);font:inherit}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 22px;border-radius:999px;border:0;
+  background:linear-gradient(#f0d38f,#c99b45);color:#2a1d05;font-weight:700;box-shadow:0 2px 0 #8a6a25}
+.btn:hover{filter:brightness(1.06)}
+.btn:active{transform:translateY(1px);box-shadow:none}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.btn.ghost{background:transparent;border:1px solid var(--brass);color:var(--brass2);box-shadow:none}
+.btn.ruby{background:linear-gradient(#d6414f,#9b2230);color:#fff;box-shadow:0 2px 0 #5d1119}
+.btn.wide{width:100%;margin-top:22px}
+.switch{text-align:center;margin-top:16px;color:var(--mute)}
+.switch button{background:none;border:0;color:var(--brass2);text-decoration:underline;padding:0}
+#authErr{color:#ff9aa4;min-height:1.4em;margin-top:12px;text-align:center}
+.hint18{font-size:.8rem;color:var(--mute);text-align:center;margin-top:18px}
+
+/* ---------- App-Rahmen ---------- */
+header{display:flex;flex-wrap:wrap;align-items:center;gap:14px 24px;padding:14px 28px;border-bottom:1px solid #244642}
+.top{position:sticky;top:0;z-index:20;background:rgba(8,22,21,.92);backdrop-filter:blur(6px)}
+.brand{font-family:var(--font-d);font-size:1.6rem;color:var(--brass2);margin-right:auto}
+.wallet{display:flex;align-items:center;gap:10px;background:#0d2321;border:1px solid var(--brass);border-radius:999px;padding:6px 18px 6px 8px}
+.coin{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f7e2a6,#c99b45 70%);border:2px dashed #7a5a1c;flex:none}
+#bal{font-weight:700;font-size:1.15rem;font-variant-numeric:tabular-nums}
+.who{color:var(--mute);font-size:.95rem}
+nav{display:flex;gap:4px;padding:0 24px;border-bottom:1px solid #244642;overflow-x:auto}
+nav button{background:none;border:0;padding:14px 18px;color:var(--mute);border-bottom:3px solid transparent;white-space:nowrap;font-weight:500}
+nav button:hover{color:var(--ivory)}
+nav button.on{color:var(--brass2);border-bottom-color:var(--brass)}
+main{max-width:1080px;margin:0 auto;padding:30px 20px 80px}
+.panel{display:none}.panel.on{display:block}
+.panelhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px;margin-bottom:20px}
+.panelhead p{margin:0;color:var(--mute)}
+#toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#3a1015;border:1px solid #ff9aa4;color:#ffd7db;padding:12px 20px;border-radius:10px;z-index:99;max-width:90vw}
+#toast.ok{background:#12352a;border-color:#7fd6a5;color:#d5f5e3}
+
+/* ---------- Lobby ---------- */
+.bonus{display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;background:var(--smoke);border:1px dashed var(--brass);border-radius:12px;padding:16px 20px;margin-bottom:28px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+.tile{position:relative;text-align:left;border:1px solid #2f5b55;border-radius:16px;padding:22px 22px 20px;background:var(--smoke);min-height:190px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;transition:border-color .2s,transform .2s}
+.tile:hover{border-color:var(--brass);transform:translateY(-3px)}
+.tile .glyph{position:absolute;right:-6px;top:-18px;font-size:8rem;line-height:1;opacity:.16;font-family:var(--font-d)}
+.tile h3{font-size:1.6rem;color:var(--brass2)}
+.tile p{margin:6px 0 0;color:var(--mute);font-size:.95rem}
+.tile.t-slots{background:linear-gradient(160deg,#2a1c3b,var(--smoke) 65%)}
+.tile.t-rou{background:linear-gradient(160deg,#3b1a20,var(--smoke) 65%)}
+.tile.t-bj{background:linear-gradient(160deg,#0f4a38,var(--smoke) 70%)}
+.tile.t-pk{background:linear-gradient(160deg,#3a3010,var(--smoke) 70%)}
+.tile.t-dc{background:linear-gradient(160deg,#1c2f42,var(--smoke) 70%)}
+.tile.t-cd{background:linear-gradient(160deg,#2c1c42,var(--smoke) 70%)}
+
+/* ---------- Chips zur Einsatzwahl ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{width:54px;height:54px;border-radius:50%;border:0;font-weight:700;font-size:.95rem;position:relative;color:#fff;
+  background:radial-gradient(circle,var(--c) 0 58%,#fff8 59% 62%,var(--c) 63%);box-shadow:0 3px 0 rgba(0,0,0,.45);
+  border:3px dashed rgba(255,255,255,.75)}
+.chip.on{transform:translateY(-4px);box-shadow:0 7px 0 rgba(0,0,0,.4),0 0 0 3px var(--brass2)}
+.chip[data-v="1"]{--c:#8a8a8a}.chip[data-v="5"]{--c:#b02a37}.chip[data-v="10"]{--c:#2b6cb0}.chip[data-v="25"]{--c:#2f855a}
+.chip[data-v="50"]{--c:#c05621}.chip[data-v="100"]{--c:#1a1a1a}.chip[data-v="250"]{--c:#6b46c1}.chip[data-v="500"]{--c:#b7791f}
+.controls{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center;margin-top:20px}
+.stake{font-size:.95rem;color:var(--mute)}
+.stake b{color:var(--ivory)}
+
+/* ---------- Slots ---------- */
+.cabinet{background:linear-gradient(#3a2455,#221334);border-radius:22px;padding:22px 22px 26px;border:2px solid var(--brass);
+  box-shadow:inset 0 0 0 5px #150c22,0 20px 50px rgba(0,0,0,.45);max-width:520px;margin:0 auto}
+.marquee{font-family:var(--font-d);text-align:center;color:var(--brass2);font-size:1.5rem;margin-bottom:14px;letter-spacing:.08em}
+.reels{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;background:#0a0612;padding:12px;border-radius:12px;border:3px solid #6d5220}
+.reel{display:grid;grid-template-rows:repeat(3,1fr);gap:8px}
+.cell{aspect-ratio:1;display:grid;place-items:center;font-size:clamp(2.4rem,9vw,3.6rem);background:linear-gradient(#fbf6ea,#e4d9bb);border-radius:10px;transition:box-shadow .2s}
+.cell.spin{filter:blur(1.2px);background:linear-gradient(#efe6cc,#cfc19a)}
+.cell.win{box-shadow:0 0 0 4px var(--ruby),0 0 24px 6px rgba(240,211,143,.85);animation:pulse .7s ease-in-out 3}
+@keyframes pulse{50%{transform:scale(1.07)}}
+.slotmsg{min-height:2.2rem;text-align:center;font-size:1.25rem;margin:14px 0 4px;color:var(--brass2);font-weight:700}
+.jackpot{max-width:520px;margin:0 auto 14px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,#3a2b06,#5c4210,#3a2b06);border:1px solid var(--brass);border-radius:12px;padding:10px 20px;font-family:var(--font-d);color:var(--brass2);letter-spacing:.05em}
+.jackpot b{font-size:1.5rem;font-variant-numeric:tabular-nums}
+.jackpot.hit{animation:pulse .6s ease-in-out 4}
+.paytable{max-width:520px;margin:26px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 18px;color:var(--mute);font-size:.92rem}
+.paytable div{display:flex;justify-content:space-between;border-bottom:1px solid #244642;padding:4px 2px}
+
+/* ---------- Karten ---------- */
+.cards{display:flex;gap:8px;min-height:var(--ch);flex-wrap:wrap}
+.card{width:var(--cw);height:var(--ch);border-radius:8px;background:#fbf6ea;color:#1c1c1c;position:relative;flex:none;
+  box-shadow:0 3px 8px rgba(0,0,0,.45);font-weight:700;user-select:none}
+.card.red{color:var(--ruby)}
+.card .tl{position:absolute;left:7px;top:5px;line-height:1;font-size:calc(var(--cw)*.3);text-align:center}
+.card .tl i{display:block;font-style:normal;font-size:.8em}
+.card .mid{position:absolute;inset:0;display:grid;place-items:center;font-size:calc(var(--cw)*.55);padding-top:14%;opacity:.9}
+.card.back{background:repeating-linear-gradient(45deg,#7c1d29 0 6px,#5b1420 6px 12px);border:3px solid #f5edda}
+.card.back *{display:none}
+.card.empty{background:transparent;border:2px dashed rgba(245,237,218,.25);box-shadow:none}
+.card.deal{animation:deal .28s ease-out}
+@keyframes deal{from{transform:translateY(-22px) rotate(-4deg);opacity:0}}
+
+/* ---------- Tische ---------- */
+.felt{background:radial-gradient(ellipse at 50% 30%,var(--felt) 0%,var(--felt2) 100%);border:6px solid #3a2a12;border-radius:26px;padding:22px;
+  box-shadow:inset 0 0 0 2px var(--brass),inset 0 0 60px rgba(0,0,0,.4)}
+.seat{display:flex;flex-direction:column;gap:8px;align-items:center;padding:8px 10px;border-radius:14px;min-width:150px}
+.seat .nm{font-weight:700;display:flex;gap:8px;align-items:center}
+.seat .st{font-size:.9rem;min-height:1.3em;color:var(--brass2)}
+.seat.win{background:rgba(240,211,143,.14);box-shadow:0 0 0 2px var(--brass2)}
+.seat.out{opacity:.45}
+.tot:empty{display:none}
+.tot{background:#0b1d1c;border:1px solid var(--brass);color:var(--brass2);border-radius:999px;padding:0 10px;font-size:.85rem;font-variant-numeric:tabular-nums}
+.dbtn{background:var(--ivory);color:#111;border-radius:50%;width:22px;height:22px;display:grid;place-items:center;font-size:.72rem;font-weight:800}
+.row{display:flex;justify-content:center;gap:26px;flex-wrap:wrap}
+.banner{text-align:center;font-family:var(--font-d);font-size:1.7rem;margin:14px 0 0;min-height:2.2rem}
+.banner.w{color:var(--brass2)}.banner.l{color:#ff9aa4}.banner.p{color:var(--ivory)}
+.midline{display:flex;justify-content:center;align-items:center;flex-direction:column;gap:10px;margin:18px 0}
+.pot{background:#0b1d1c;border:1px solid var(--brass);border-radius:999px;padding:4px 16px;font-weight:700}
+.log{background:#0b1d1c;border:1px solid #244642;border-radius:12px;padding:12px 16px;max-height:210px;overflow:auto;font-size:.93rem;color:var(--mute);margin-top:18px}
+.log div{padding:1px 0}.log div:last-child{color:var(--ivory)}
+.pokerctl{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:18px}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{background:var(--smoke);border:1px solid #33605a;border-radius:10px;padding:10px 16px}
+.seg button.on{border-color:var(--brass);color:var(--brass2);background:var(--smoke2)}
+
+/* ---------- Roulette ---------- */
+.rwrap{display:grid;grid-template-columns:1fr 230px;gap:26px;align-items:start}
+.rboard{background:var(--felt2);border:4px solid #3a2a12;border-radius:16px;padding:12px;box-shadow:inset 0 0 0 2px var(--brass)}
+.rb-zero,.rn,.ro{position:relative;border:1px solid rgba(245,237,218,.55);color:#fff;font-weight:700;background:transparent;padding:0}
+.rb-zero{width:100%;height:40px;background:#1c7a4b;border-radius:8px 8px 0 0;font-size:1.05rem}
+.rb-nums{display:grid;grid-template-columns:repeat(12,1fr)}
+.rn{height:46px;font-size:.95rem}
+.rn.red,.ro.red{background:var(--ruby)}.rn.blk,.ro.blk{background:#151515}
+.rb-doz,.rb-out{display:grid;grid-template-columns:repeat(3,1fr)}
+.rb-out{grid-template-columns:repeat(6,1fr)}
+.ro{height:42px;font-size:.88rem}
+.rn:hover,.ro:hover,.rb-zero:hover{filter:brightness(1.35)}
+.cb{position:absolute;right:2px;bottom:2px;min-width:22px;height:22px;border-radius:11px;background:var(--brass2);color:#2a1d05;font-size:.7rem;display:grid;place-items:center;padding:0 5px;border:2px dashed #7a5a1c;pointer-events:none}
+.rside{background:var(--smoke);border:1px solid #2f5b55;border-radius:16px;padding:18px;text-align:center}
+.ball{width:118px;height:118px;border-radius:50%;margin:8px auto 14px;display:grid;place-items:center;font-family:var(--font-d);font-size:3rem;
+  background:#1c7a4b;border:6px double var(--brass);box-shadow:0 0 0 5px #0b1d1c}
+.ball.red{background:var(--ruby)}.ball.black{background:#151515}
+.hist{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+.hist span{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:.75rem;font-weight:700;background:#1c7a4b}
+.hist span.red{background:var(--ruby)}.hist span.black{background:#151515}
+.die{width:74px;height:74px;border-radius:14px;background:linear-gradient(#fbf6ea,#e4d9bb);display:grid;place-items:center;font-size:2.2rem;font-weight:800;color:#1c1c1c;box-shadow:0 4px 10px rgba(0,0,0,.4);transition:transform .15s}
+.die.roll{animation:diceroll .12s linear infinite}
+@keyframes diceroll{50%{transform:rotate(8deg) scale(1.05)}}
+.dicegrid{max-width:640px;margin:22px auto 0;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.dtile{position:relative;background:var(--felt2);border:1px solid var(--brass);border-radius:10px;padding:14px 8px;text-align:center;color:#fff;font-weight:700}
+.dtile:hover{filter:brightness(1.25)}
+.dtile small{display:block;font-weight:500;color:var(--mute);margin-top:2px}
+.dtile.big-small{grid-column:span 3}
+.dtile.numbers{grid-column:span 1}
+
+/* ---------- Konto ---------- */
+.two{display:grid;grid-template-columns:1fr 1.4fr;gap:26px}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid #244642}
+th{color:var(--mute);font-weight:500}
+td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}
+.pos{color:#7fd6a5}.neg{color:#ff9aa4}
+.card-box{background:var(--smoke);border:1px solid #2f5b55;border-radius:14px;padding:18px 20px}
+.card-box h3{font-size:1.25rem;color:var(--brass2);margin-bottom:10px}
+
+@media (max-width:760px){
+  :root{--cw:52px;--ch:75px}
+  .rwrap,.two{grid-template-columns:1fr}
+  header{padding:10px 16px;gap:8px 12px}
+  .brand{font-size:1.25rem}
+  #logout{padding:7px 14px;font-size:.9rem}
+  .rn{height:40px;font-size:.8rem}.ro{font-size:.78rem}
+  .felt{padding:14px}
+  .row{gap:10px}
+  .seat{min-width:0}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="auth">
+  <div class="authbox">
+    <div class="logo">Salon<br>Émeraude</div>
+    <div class="sub">Das Casino mit Spielgeld. Kein echtes Geld, nur Spaß.</div>
+    <div>
+      <label for="u">Benutzername</label>
+      <input type="text" id="u" autocomplete="username" maxlength="20">
+      <label for="p">Passwort</label>
+      <input type="password" id="p" autocomplete="current-password">
+      <div id="inviteWrap" class="hidden">
+        <label for="inv">Einladungscode</label>
+        <input type="text" id="inv" autocomplete="off">
+      </div>
+      <button class="btn wide" id="authBtn">Anmelden</button>
+    </div>
+    <div id="authErr" role="alert"></div>
+    <div class="switch"><span id="authQ">Noch kein Konto?</span> <button id="authSwitch">Jetzt registrieren</button></div>
+    <div class="hint18">Neue Konten starten mit 1.000 Chips.</div>
+    <div class="hint18"><button id="showLB" style="background:none;border:0;color:var(--brass2);text-decoration:underline;padding:0;cursor:pointer">Bestenliste ansehen</button></div>
+  </div>
+</div>
+
+<!-- Bestenliste ohne Login -->
+<div id="lbModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;display:grid;place-items:center;padding:20px">
+  <div style="background:var(--smoke);border:1px solid var(--brass);border-radius:14px;padding:24px;max-width:420px;width:100%;max-height:80vh;overflow:auto">
+    <h3 style="color:var(--brass2);margin-bottom:14px">Bestenliste</h3>
+    <div class="seg" id="lbPubTabs" style="margin-bottom:12px">
+      <button data-t="balance" class="on">Guthaben</button>
+      <button data-t="streak">Siegesserie</button>
+      <button data-t="daily">Tagesserie</button>
+    </div>
+    <table><tbody id="lbPub"></tbody></table>
+    <button class="btn ghost wide" id="lbClose" style="margin-top:16px">Schließen</button>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app" class="hidden">
+  <div class="top">
+  <header>
+    <div class="brand">Salon Émeraude</div>
+    <div class="who" id="who"></div>
+    <div class="wallet" title="Dein Guthaben"><span class="coin"></span><span id="bal">0</span></div>
+    <button class="btn ghost" id="logout">Abmelden</button>
+  </header>
+  <nav id="nav">
+    <button data-p="lobby" class="on">Lobby</button>
+    <button data-p="slots">Spielautomat</button>
+    <button data-p="roulette">Roulette</button>
+    <button data-p="blackjack">Blackjack</button>
+    <button data-p="poker">Poker</button>
+    <button data-p="dice">Würfeln</button>
+    <button data-p="codes">Testmenü</button>
+    <button data-p="account">Konto &amp; Rangliste</button>
+  </nav>
+  </div>
+  <main>
+
+    <!-- Lobby -->
+    <section class="panel on" id="p-lobby">
+      <div class="bonus">
+        <div><strong>Tagesbonus</strong><div class="muted" id="bonusTxt"></div></div>
+        <button class="btn" id="bonusBtn">Bonus abholen</button>
+      </div>
+      <div class="bonus">
+        <div><strong>Glücksrad</strong><div class="muted" id="wheelTxt"></div></div>
+        <button class="btn ghost" id="wheelBtn">Rad drehen</button>
+      </div>
+      <div class="tiles">
+        <button class="tile t-slots" data-go="slots"><span class="glyph">7</span><h3>Spielautomat</h3><p>3 Walzen, 5 Gewinnlinien, bis zu 800-facher Gewinn.</p></button>
+        <button class="tile t-rou" data-go="roulette"><span class="glyph">0</span><h3>Roulette</h3><p>Europäisches Rad mit einer Null. Setze auf Zahlen, Farben und Dutzende.</p></button>
+        <button class="tile t-bj" data-go="blackjack"><span class="glyph">♠</span><h3>Blackjack</h3><p>Gegen den Dealer, mit Max und Luna am Tisch. Blackjack zahlt 3:2.</p></button>
+        <button class="tile t-pk" data-go="poker"><span class="glyph">♦</span><h3>Poker</h3><p>Texas Hold'em gegen die KI-Spieler Max und Luna.</p></button>
+        <button class="tile t-dc" data-go="dice"><span class="glyph">⚄</span><h3>Würfeln</h3><p>3 Würfel, schnelle Runden. Groß/Klein, Zahlen und Tripel.</p></button>
+        <button class="tile t-cd" data-go="codes"><span class="glyph">#</span><h3>Testmenü</h3><p>Mit Code Zugriff auf einen Regler, um dir Chips zu geben.</p></button>
+      </div>
+    </section>
+
+    <!-- Slots -->
+    <section class="panel" id="p-slots">
+      <div class="panelhead"><h2>Spielautomat</h2><p>Der Einsatz verteilt sich auf 5 Linien: 3 waagerechte und 2 diagonale.</p></div>
+      <div class="jackpot" id="jackpotBox"><span>💰 JACKPOT</span><b id="jackpotVal">0</b></div>
+      <div class="cabinet">
+        <div class="marquee">★ LUCKY 7 ★</div>
+        <div class="reels" id="reels">
+          <div class="reel"></div><div class="reel"></div><div class="reel"></div>
+        </div>
+        <div class="slotmsg" id="slotMsg">Viel Glück!</div>
+        <div class="chips" id="slotChips" style="justify-content:center"></div>
+        <div style="text-align:center;margin-top:18px"><button class="btn" id="spinBtn" style="min-width:200px;font-size:1.1rem">Drehen</button></div>
+      </div>
+      <div class="paytable" id="paytable"></div>
+    </section>
+
+    <!-- Roulette -->
+    <section class="panel" id="p-roulette">
+      <div class="panelhead"><h2>Roulette</h2><p>Wähle einen Chip und tippe auf das Feld. Zahl 35:1, Dutzend 2:1, Farbe/Gerade/Hälfte 1:1.</p></div>
+      <div class="rwrap">
+        <div>
+          <div class="rboard" id="rboard"></div>
+          <div class="controls">
+            <div class="chips" id="rChips"></div>
+            <button class="btn ghost" id="rAllIn">All-In auf Rot</button>
+          </div>
+          <div class="controls">
+            <span class="stake">Einsatz gesamt: <b id="rTotal">0</b></span>
+            <button class="btn ghost" id="rUndo">Letzten Chip zurück</button>
+            <button class="btn ghost" id="rClear">Alle löschen</button>
+            <button class="btn" id="rSpin">Kugel rollen</button>
+          </div>
+        </div>
+        <div class="rside">
+          <div class="muted">Letzte Zahl</div>
+          <div class="ball" id="ball">–</div>
+          <div id="rMsg" style="min-height:3.2rem;font-weight:700"></div>
+          <div class="hist" id="rHist"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Blackjack -->
+    <section class="panel" id="p-blackjack">
+      <div class="panelhead"><h2>Blackjack</h2><p>Der Dealer zieht bis 17. Verdoppeln ist mit den ersten zwei Karten möglich.</p></div>
+      <div class="felt">
+        <div class="row" style="margin-bottom:8px">
+          <div class="seat"><div class="nm">Dealer <span class="tot" id="bjDT"></span></div><div class="cards" id="bjDealer"></div></div>
+        </div>
+        <div class="row">
+          <div class="seat" id="bjSeatMax"><div class="nm">Max <span class="tot"></span></div><div class="cards"></div><div class="st"></div></div>
+          <div class="seat" id="bjSeatLuna"><div class="nm">Luna <span class="tot"></span></div><div class="cards"></div><div class="st"></div></div>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <div class="seat"><div class="nm">Du <span class="tot" id="bjPT"></span></div><div class="cards" id="bjPlayer"></div></div>
+        </div>
+        <div class="banner" id="bjBanner"></div>
+      </div>
+      <div class="controls" id="bjBet">
+        <div class="chips" id="bjChips"></div>
+        <button class="btn" id="bjDeal">Karten geben</button>
+      </div>
+      <div class="controls hidden" id="bjAct">
+        <button class="btn" data-bj="hit">Karte</button>
+        <button class="btn ghost" data-bj="stand">Halten</button>
+        <button class="btn ghost" data-bj="double" id="bjDouble">Verdoppeln</button>
+        <span class="stake">Einsatz: <b id="bjStake">0</b></span>
+      </div>
+    </section>
+
+    <!-- Poker -->
+    <section class="panel" id="p-poker">
+      <div class="panelhead"><h2>Texas Hold'em</h2><p>Limit-Poker gegen Max (offensiv) und Luna (vorsichtig). Feste Einsatzgröße, maximal 3 Erhöhungen pro Runde.</p></div>
+      <div class="felt">
+        <div class="row">
+          <div class="seat" id="pkMax"><div class="nm"><span>Max</span></div><div class="cards"></div><div class="st"></div></div>
+          <div class="seat" id="pkLuna"><div class="nm"><span>Luna</span></div><div class="cards"></div><div class="st"></div></div>
+        </div>
+        <div class="midline">
+          <div class="cards" id="pkBoard" style="justify-content:center"></div>
+          <div class="pot" id="pkPot">Pot: 0</div>
+        </div>
+        <div class="row">
+          <div class="seat" id="pkYou"><div class="nm"><span>Du</span></div><div class="cards"></div><div class="st"></div></div>
+        </div>
+        <div class="banner" id="pkBanner"></div>
+      </div>
+      <div class="pokerctl" id="pkStart">
+        <div class="seg" id="pkUnit">
+          <button data-u="10" class="on">Blinds 5 / 10</button>
+          <button data-u="50">Blinds 25 / 50</button>
+          <button data-u="250">Blinds 125 / 250</button>
+        </div>
+        <button class="btn" id="pkDeal">Hand starten</button>
+      </div>
+      <div class="pokerctl hidden" id="pkAct">
+        <button class="btn ruby" data-pk="fold">Aussteigen</button>
+        <button class="btn" data-pk="call" id="pkCall">Checken</button>
+        <button class="btn ghost" data-pk="raise" id="pkRaise">Erhöhen</button>
+      </div>
+      <div class="log" id="pkLog"></div>
+    </section>
+
+    <!-- Würfeln -->
+    <section class="panel" id="p-dice">
+      <div class="panelhead"><h2>Würfeln</h2><p>3 Würfel. Groß (11–17) und Klein (4–10) zahlen 1:1, eine Zahl je nach Treffern, ein Tripel bis zu 150:1.</p></div>
+      <div class="felt" style="max-width:640px;margin:0 auto">
+        <div class="row" id="diceRow" style="gap:18px;margin-bottom:18px">
+          <div class="die">?</div><div class="die">?</div><div class="die">?</div>
+        </div>
+        <div class="banner" id="diceBanner"></div>
+      </div>
+      <div class="dicegrid" id="diceBoard"></div>
+      <div class="controls">
+        <div class="chips" id="diceChips"></div>
+        <button class="btn ghost" id="diceUndo">Letzten Chip zurück</button>
+        <button class="btn ghost" id="diceClear">Alle löschen</button>
+        <button class="btn ghost" id="diceAllIn">All-In</button>
+      </div>
+      <div class="controls">
+        <span class="stake">Einsatz gesamt: <b id="diceTotal">0</b></span>
+        <button class="btn" id="diceRoll" style="min-width:180px">Würfeln</button>
+      </div>
+    </section>
+
+    <!-- Codes / Testmenü -->
+    <section class="panel" id="p-codes">
+      <div class="panelhead"><h2>Testmenü</h2><p>Nur mit Code zugänglich. Zum Testen des Casinos, nicht für Mitspieler gedacht.</p></div>
+      <div class="card-box" style="max-width:440px;margin:0 auto" id="codeGate">
+        <label for="codeInput">Code</label>
+        <input type="text" id="codeInput" autocomplete="off" placeholder="Code eingeben">
+        <button class="btn wide" id="codeBtn" style="margin-top:16px">Bestätigen</button>
+        <div id="codeMsg" style="min-height:1.6em;margin-top:12px;font-weight:700"></div>
+      </div>
+      <div class="card-box hidden" style="max-width:440px;margin:0 auto" id="testPanel">
+        <label for="giveRange">Betrag: <b id="giveLabel">1</b> Chips</label>
+        <input type="range" id="giveRange" min="0" max="1000" value="0" style="width:100%;margin:10px 0 6px">
+        <input type="number" id="giveExact" min="1" max="100000000000" step="1" style="margin-top:6px">
+        <div class="chips" style="margin-top:14px;justify-content:flex-start">
+          <button class="btn ghost" data-q="1000000">1 Mio.</button>
+          <button class="btn ghost" data-q="1000000000">1 Mrd.</button>
+          <button class="btn ghost" data-q="10000000000">10 Mrd.</button>
+          <button class="btn ghost" data-q="100000000000">100 Mrd.</button>
+        </div>
+        <button class="btn wide" id="giveBtn" style="margin-top:18px">Chips geben</button>
+        <div id="giveMsg" style="min-height:1.6em;margin-top:12px;font-weight:700"></div>
+      </div>
+
+      <div class="card-box hidden" style="max-width:440px;margin:22px auto 0" id="luckPanel">
+        <h3 style="margin-bottom:4px">Glück</h3>
+        <p class="muted" style="margin:0 0 12px">Gilt für Slots, Roulette, Würfeln, Blackjack und Poker. 1 % = fast nie, 100 % = fast immer.</p>
+        <label for="luckRange">Gewinnchance: <b id="luckLabel">50</b> %</label>
+        <input type="range" id="luckRange" min="1" max="100" value="50" style="width:100%;margin:10px 0 6px">
+        <div class="chips" style="margin-top:10px;justify-content:flex-start">
+          <button class="btn ghost" data-lk="1">1 %</button>
+          <button class="btn ghost" data-lk="25">25 %</button>
+          <button class="btn ghost" data-lk="50">50 %</button>
+          <button class="btn ghost" data-lk="75">75 %</button>
+          <button class="btn ghost" data-lk="100">100 %</button>
+          <button class="btn ghost" id="luckOff">Aus (normal)</button>
+        </div>
+        <button class="btn wide" id="luckBtn" style="margin-top:16px">Glück anwenden</button>
+        <div id="luckMsg" style="min-height:1.6em;margin-top:10px;font-weight:700"></div>
+      </div>
+
+      <div class="card-box hidden" style="max-width:440px;margin:22px auto 0" id="streakPanel">
+        <h3 style="margin-bottom:12px">Serien setzen</h3>
+        <label for="winStreakInput">Aktuelle Siegesserie</label>
+        <input type="number" id="winStreakInput" min="0" step="1" style="margin-bottom:14px">
+        <label for="dailyStreakInput">Tagesserie (Tage in Folge)</label>
+        <input type="number" id="dailyStreakInput" min="0" step="1">
+        <button class="btn wide" id="streakBtn" style="margin-top:16px">Serien setzen</button>
+        <div id="streakMsg" style="min-height:1.6em;margin-top:10px;font-weight:700"></div>
+      </div>
+    </section>
+
+        <!-- Konto -->
+    <section class="panel" id="p-account">
+      <div class="panelhead"><h2>Konto &amp; Rangliste</h2></div>
+      <div class="card-box" style="margin-bottom:22px">
+        <h3>Deine Serien</h3>
+        <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+          <div><div class="muted">Aktuelle Siegesserie</div><div style="font-size:1.8rem;font-weight:700" id="stWin">0</div></div>
+          <div><div class="muted">Beste Siegesserie</div><div style="font-size:1.8rem;font-weight:700" id="stBest">0</div></div>
+          <div><div class="muted">Tage in Folge (Bonus)</div><div style="font-size:1.8rem;font-weight:700" id="stDaily">0</div></div>
+        </div>
+      </div>
+      <div class="two">
+        <div class="card-box"><h3>Bestenliste</h3>
+          <div class="seg" id="lbTabs" style="margin-bottom:12px">
+            <button data-t="balance" class="on">Guthaben</button>
+            <button data-t="streak">Siegesserie</button>
+            <button data-t="daily">Tagesserie</button>
+            <button data-t="win">Größter Einzelgewinn</button>
+          </div>
+          <table><tbody id="lb"></tbody></table>
+          <div id="rescueBox" class="hidden" style="margin-top:16px"><p class="muted">Dein Guthaben ist fast aufgebraucht.</p><button class="btn" id="rescueBtn">Notgroschen abholen</button></div>
+        </div>
+        <div class="card-box"><h3>Dein Verlauf</h3>
+          <table><thead><tr><th>Spiel</th><th>Notiz</th><th class="r">+/–</th><th class="r">Guthaben</th></tr></thead><tbody id="hist"></tbody></table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="wheelModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:60;display:grid;place-items:center;padding:20px">
+  <div style="background:var(--smoke);border:1px solid var(--brass);border-radius:16px;padding:28px;max-width:340px;width:100%;text-align:center">
+    <h3 style="color:var(--brass2);margin-bottom:16px">Tägliches Glücksrad</h3>
+    <div id="wheelWrap" style="width:220px;height:220px;margin:0 auto 18px;position:relative">
+      <div id="wheelDisc" style="width:100%;height:100%;border-radius:50%;border:6px solid var(--brass);display:grid;place-items:center;font-family:var(--font-d);font-size:2.2rem;color:var(--brass2);background:conic-gradient(from 0deg,#173c39,#1a3835,#173c39,#1a3835,#173c39,#1a3835,#173c39,#1a3835);transition:transform 2.4s cubic-bezier(.15,.85,.25,1)">?</div>
+      <div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);border-left:10px solid transparent;border-right:10px solid transparent;border-top:16px solid var(--brass2)"></div>
+    </div>
+    <div id="wheelResult" style="min-height:1.6em;font-weight:700;color:var(--brass2);margin-bottom:14px"></div>
+    <button class="btn wide" id="wheelSpinBtn">Drehen</button>
+    <button class="btn ghost wide" id="wheelCloseBtn" style="margin-top:10px">Schließen</button>
+  </div>
+</div>
+<div id="toast" class="hidden" role="status"></div>
+
+<script>
+/* =========================================================
+   Hilfsfunktionen
+   ========================================================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const fmt = n => Number(n).toLocaleString('de-DE');
+let token = localStorage.getItem('casino_token') || '';
+let balance = 0;
+
+async function api(path, body) {
+  const opt = { method: body === undefined ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json' } };
+  if (token) opt.headers.Authorization = 'Bearer ' + token;
+  if (body !== undefined) opt.body = JSON.stringify(body);
+  let res, data;
+  try { res = await fetch(path, opt); data = await res.json(); }
+  catch (e) { throw new Error('Der Server antwortet nicht. Läuft server.py?'); }
+  if (!res.ok) {
+    if (res.status === 401 && token) { logoutLocal(); }
+    throw new Error(data.error || 'Fehler');
+  }
+  return data;
+}
+let toastT;
+function toast(msg, ok) {
+  const t = $('#toast'); t.textContent = msg; t.className = ok ? 'ok' : '';
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), 3200);
+}
+function setBalance(n) { balance = n; $('#bal').textContent = fmt(n); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* Kommentare des Croupiers, rein zur Stimmung */
+const SAY_BIGWIN = ["Das Haus verneigt sich.", "Ein Volltreffer!", "So sieht ein guter Abend aus.", "Chips wie Konfetti.", "Da war Glück im Spiel – viel Glück."];
+const SAY_WIN = ["Sauber getroffen.", "Die Chips wandern zu dir.", "Weiter so.", "Nett gespielt."];
+const SAY_LOSE = ["Diesmal nicht.", "Das Haus behält die Oberhand.", "Kopf hoch, nächste Runde.", "So ist das Geschäft."];
+const SAY_STREAK = ["Du bist heiß heute!", "Eine Serie zum Vorzeigen.", "Läuft bei dir!"];
+function croupier(el, net, bonus) {
+  const pool = bonus ? SAY_STREAK : net > 0 ? (net > 200 ? SAY_BIGWIN : SAY_WIN) : net < 0 ? SAY_LOSE : [];
+  if (pool.length) el.textContent = pool[Math.floor(Math.random() * pool.length)];
+}
+function streakToast(streak) {
+  if (streak && streak.bonus) toast(`Siegesserie ×${streak.n}! Serien-Bonus: +${fmt(streak.bonus)}`, true);
+}
+const guard = fn => async (...a) => { try { await fn(...a); } catch (e) { toast(e.message); } };
+
+/* Chip-Auswahl */
+function chipBar(el, values, def, onPick) {
+  el.innerHTML = values.map(v => `<button class="chip${v === def ? ' on' : ''}" data-v="${v}" aria-label="${v} Chips">${v}</button>`).join('');
+  el.addEventListener('click', e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    $$('.chip', el).forEach(c => c.classList.toggle('on', c === b));
+    onPick(+b.dataset.v);
+  });
+}
+/* Wählt aus einer festen Liste erlaubter Einsätze den größten, den man sich leisten kann. */
+function allInPick(values) {
+  const affordable = values.filter(v => v <= balance);
+  return affordable.length ? affordable[affordable.length - 1] : values[0];
+}
+
+/* Karten zeichnen */
+const SUIT = { s: '♠', h: '♥', d: '♦', c: '♣' };
+function cardHTML(code, deal) {
+  if (code === '??') return `<div class="card back${deal ? ' deal' : ''}"></div>`;
+  const r = code[0] === 'T' ? '10' : code[0], s = code[1];
+  return `<div class="card ${s === 'h' || s === 'd' ? 'red' : ''}${deal ? ' deal' : ''}"><div class="tl">${r}<i>${SUIT[s]}</i></div><div class="mid">${SUIT[s]}</div></div>`;
+}
+function setCards(el, cards, slots = 0) {
+  const old = el._c || [];
+  let h = cards.map((c, i) => cardHTML(c, old[i] !== c)).join('');
+  for (let i = cards.length; i < slots; i++) h += '<div class="card empty"></div>';
+  el.innerHTML = h; el._c = cards.slice();
+}
+
+/* =========================================================
+   Anmeldung
+   ========================================================= */
+let regMode = false, inviteRequired = false;
+api('/api/config').then(c => { inviteRequired = !!c.invite_required; setAuthMode(false); }).catch(() => {});
+function setAuthMode(reg) {
+  regMode = reg;
+  $('#authBtn').textContent = reg ? 'Konto erstellen' : 'Anmelden';
+  $('#authQ').textContent = reg ? 'Schon ein Konto?' : 'Noch kein Konto?';
+  $('#authSwitch').textContent = reg ? 'Zur Anmeldung' : 'Jetzt registrieren';
+  $('#p').autocomplete = reg ? 'new-password' : 'current-password';
+  $('#authErr').textContent = '';
+  $('#inviteWrap').classList.toggle('hidden', !(reg && inviteRequired));
+}
+$('#authSwitch').onclick = () => setAuthMode(!regMode);
+async function loadPublicLB(type) {
+  $$('#lbPubTabs button').forEach(b => b.classList.toggle('on', b.dataset.t === type));
+  const d = await api('/api/leaderboard?type=' + type);
+  const label = { balance: 'Chips', streak: 'Serie', daily: 'Tage' }[type];
+  $('#lbPub').innerHTML = d.rows.length
+    ? d.rows.map((r, i) => `<tr><td>${i + 1}.</td><td>${esc(r.username)}</td><td class="r">${fmt(r.value)} ${label}</td></tr>`).join('')
+    : '<tr><td class="muted">Noch keine Einträge.</td></tr>';
+}
+$('#showLB').onclick = () => { $('#lbModal').classList.remove('hidden'); loadPublicLB('balance'); };
+$('#lbClose').onclick = () => $('#lbModal').classList.add('hidden');
+$('#lbPubTabs').onclick = e => { const b = e.target.closest('button'); if (b) loadPublicLB(b.dataset.t); };
+async function doAuth() {
+  try {
+    const body = { username: $('#u').value, password: $('#p').value };
+    if (regMode && inviteRequired) body.invite = $('#inv').value;
+    const d = await api(regMode ? '/api/register' : '/api/login', body);
+    token = d.token; localStorage.setItem('casino_token', token);
+    $('#p').value = '';
+    enterApp(d);
+  } catch (e) { $('#authErr').textContent = e.message; }
+}
+$('#authBtn').onclick = doAuth;
+$('#p').addEventListener('keydown', e => { if (e.key === 'Enter') doAuth(); });
+$('#u').addEventListener('keydown', e => { if (e.key === 'Enter') $('#p').focus(); });
+
+function logoutLocal() {
+  token = ''; localStorage.removeItem('casino_token');
+  $('#app').classList.add('hidden'); $('#auth').classList.remove('hidden');
+}
+$('#logout').onclick = async () => { try { await api('/api/logout', {}); } catch (e) {} logoutLocal(); };
+
+let bonusT;
+function showAccount(d) {
+  setBalance(d.balance);
+  $('#who').textContent = d.username;
+  clearInterval(bonusT);
+  let left = d.bonus_in;
+  const upd = () => {
+    const b = $('#bonusBtn');
+    if (left <= 0) { $('#bonusTxt').textContent = `${fmt(d.bonus_amount)} Chips warten auf dich.`; b.disabled = false; }
+    else {
+      const h = Math.floor(left / 3600), m = Math.floor(left % 3600 / 60);
+      $('#bonusTxt').textContent = `Der nächste Bonus ist in ${h} Std. ${m} Min. bereit.`; b.disabled = true;
+    }
+    left--;
+  };
+  upd(); bonusT = setInterval(upd, 1000);
+  updateWheelBtn(d.wheel_in);
+}
+let wheelReady = false;
+function updateWheelBtn(waitSec) {
+  wheelReady = waitSec <= 0;
+  $('#wheelBtn').disabled = !wheelReady;
+  $('#wheelTxt').textContent = wheelReady ? 'Eine kostenlose Drehung wartet auf dich.' :
+    `Nächste Drehung in ${Math.floor(waitSec / 3600)} Std. ${Math.floor(waitSec % 3600 / 60)} Min.`;
+}
+$('#wheelBtn').onclick = () => {
+  $('#wheelModal').classList.remove('hidden'); $('#wheelResult').textContent = ''; $('#wheelSpinBtn').disabled = false;
+  const disc = $('#wheelDisc'); disc.style.transition = 'none'; disc.style.transform = 'rotate(0deg)'; disc.textContent = '?';
+  void disc.offsetWidth; disc.style.transition = 'transform 2.4s cubic-bezier(.15,.85,.25,1)';
+};
+$('#wheelCloseBtn').onclick = () => $('#wheelModal').classList.add('hidden');
+$('#wheelSpinBtn').onclick = guard(async () => {
+  $('#wheelSpinBtn').disabled = true;
+  let r;
+  try { r = await api('/api/wheel', {}); }
+  catch (e) { $('#wheelSpinBtn').disabled = false; throw e; }
+  const disc = $('#wheelDisc');
+  const turns = 5 + Math.random();
+  disc.style.transform = `rotate(${turns * 360}deg)`;
+  await sleep(2500);
+  disc.style.transition = 'none'; disc.style.transform = 'rotate(0deg)'; disc.textContent = '🎉';
+  $('#wheelResult').textContent = `Gewonnen: ${fmt(r.prize)} Chips!`;
+  toast(`Glücksrad: +${fmt(r.prize)} Chips`, true);
+  showAccount(r);
+});
+async function enterApp(d) {
+  $('#auth').classList.add('hidden'); $('#app').classList.remove('hidden');
+  showAccount(d);
+  updateWheelBtn(d.wheel_in);
+  go('lobby');
+}
+$('#bonusBtn').onclick = guard(async () => { const d = await api('/api/bonus', {}); showAccount(d); toast('Bonus gutgeschrieben!', true); });
+
+/* Navigation */
+function go(p) {
+  $$('#nav button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+  $$('.panel').forEach(s => s.classList.toggle('on', s.id === 'p-' + p));
+  if (p === 'slots') guard(refreshJackpot)();
+  if (p === 'blackjack') guard(bjLoad)();
+  if (p === 'poker') guard(pkLoad)();
+  if (p === 'account') guard(loadAccount)();
+  window.scrollTo(0, 0);
+}
+$('#nav').onclick = e => { const b = e.target.closest('button'); if (b) go(b.dataset.p); };
+$$('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+
+/* =========================================================
+   SLOTS
+   ========================================================= */
+const SYM = ['🍒', '🍋', '🍊', '🔔', '⭐', '💎', '7️⃣'];
+let slotBet = 10, spinning = false;
+chipBar($('#slotChips'), [5, 10, 25, 50, 100, 250], 10, v => slotBet = v);
+$('#slotChips').insertAdjacentHTML('afterend', '<div class="controls" style="margin-top:10px"><button class="btn ghost" id="slotAllIn">All-In</button></div>');
+$('#slotAllIn').onclick = () => {
+  const v = allInPick([5, 10, 25, 50, 100, 250]);
+  slotBet = v; $$('.chip', $('#slotChips')).forEach(c => c.classList.toggle('on', +c.dataset.v === v));
+  toast(`Einsatz auf ${fmt(v)} gesetzt – mehr Guthaben, mehr Mut.`);
+};
+async function refreshJackpot() {
+  try { const d = await api('/api/jackpot'); $('#jackpotVal').textContent = fmt(d.jackpot); } catch (e) {}
+}
+(function initSlots() {
+  const reels = $$('#reels .reel');
+  reels.forEach(r => r.innerHTML = [0, 1, 2].map(() => `<div class="cell">${SYM[Math.floor(Math.random() * 7)]}</div>`).join(''));
+  const pay = [['🍒🍒🍒', 11], ['🍋🍋🍋', 17], ['🍊🍊🍊', 25], ['🔔🔔🔔', 50], ['⭐⭐⭐', 110], ['💎💎💎', 280], ['7️⃣7️⃣7️⃣', 900]];
+  $('#paytable').innerHTML = pay.map(p => `<div><span>${p[0]}</span><b>${p[1]}×</b></div>`).join('') + '<div><span>🍒🍒 (links)</span><b>1×</b></div>' +
+    '<div style="grid-column:1/-1;border:0" class="muted">Faktoren gelten pro Linie (Einsatz ÷ 5).</div>';
+})();
+$('#spinBtn').onclick = guard(async () => {
+  if (spinning) return;
+  spinning = true; $('#spinBtn').disabled = true;
+  $$('.cell').forEach(c => c.classList.remove('win'));
+  $('#slotMsg').textContent = '';
+  let r;
+  try { r = await api('/api/slots/spin', { bet: slotBet }); }
+  catch (e) { spinning = false; $('#spinBtn').disabled = false; throw e; }
+  setBalance(balance - slotBet);
+  const reels = $$('#reels .reel');
+  const timers = reels.map((reel, ci) => {
+    const cells = $$('.cell', reel); cells.forEach(c => c.classList.add('spin'));
+    return setInterval(() => cells.forEach(c => c.textContent = SYM[Math.floor(Math.random() * 7)]), 70);
+  });
+  for (let ci = 0; ci < 3; ci++) {
+    await sleep(650 + ci * 420);
+    clearInterval(timers[ci]);
+    $$('.cell', reels[ci]).forEach((c, ri) => { c.textContent = r.grid[ri][ci]; c.classList.remove('spin'); });
+  }
+  r.wins.forEach(w => w.cells.forEach(([ri, ci]) => $$('.cell', reels[ci])[ri].classList.add('win')));
+  if (r.jackpot_won) {
+    $('#slotMsg').textContent = `🎉 JACKPOT! +${fmt(r.jackpot_won)} Chips! 🎉`;
+    $('#jackpotBox').classList.add('hit'); setTimeout(() => $('#jackpotBox').classList.remove('hit'), 2600);
+    toast(`Riesiger Jackpot: +${fmt(r.jackpot_won)}!`, true);
+  } else {
+    $('#slotMsg').textContent = r.win ? `Gewinn: ${fmt(r.win)} Chips!` : 'Leider nichts. Nochmal?';
+  }
+  $('#jackpotVal').textContent = fmt(r.jackpot);
+  setBalance(r.balance);
+  streakToast(r.streak);
+  spinning = false; $('#spinBtn').disabled = false;
+});
+
+/* =========================================================
+   ROULETTE
+   ========================================================= */
+const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+let rChip = 5, rBets = [], rBusy = false;
+chipBar($('#rChips'), [1, 5, 10, 25, 100], 5, v => rChip = v);
+(function buildRoulette() {
+  let h = '<button class="rb-zero" data-bet="num:0">0</button><div class="rb-nums">';
+  for (let row = 0; row < 3; row++) for (let col = 0; col < 12; col++) {
+    const n = col * 3 + (3 - row);
+    h += `<button class="rn ${RED.has(n) ? 'red' : 'blk'}" data-bet="num:${n}">${n}</button>`;
+  }
+  h += '</div><div class="rb-doz"><button class="ro" data-bet="dozen:1">1.–12.</button><button class="ro" data-bet="dozen:2">13.–24.</button><button class="ro" data-bet="dozen:3">25.–36.</button></div>';
+  h += '<div class="rb-out"><button class="ro" data-bet="low:0">1–18</button><button class="ro" data-bet="even:0">Gerade</button>' +
+    '<button class="ro red" data-bet="red:0">Rot</button><button class="ro blk" data-bet="black:0">Schwarz</button>' +
+    '<button class="ro" data-bet="odd:0">Ungerade</button><button class="ro" data-bet="high:0">19–36</button></div>';
+  $('#rboard').innerHTML = h;
+})();
+function renderBets() {
+  $$('#rboard .cb').forEach(e => e.remove());
+  const sums = {};
+  rBets.forEach(b => sums[b.key] = (sums[b.key] || 0) + b.amount);
+  Object.entries(sums).forEach(([k, v]) => {
+    const el = $(`#rboard [data-bet="${k}"]`);
+    if (el) el.insertAdjacentHTML('beforeend', `<span class="cb">${v}</span>`);
+  });
+  $('#rTotal').textContent = fmt(rBets.reduce((a, b) => a + b.amount, 0));
+}
+$('#rboard').onclick = e => {
+  if (rBusy) return;
+  const b = e.target.closest('[data-bet]'); if (!b) return;
+  const total = rBets.reduce((a, x) => a + x.amount, 0);
+  if (total + rChip > balance) return toast('Nicht genug Guthaben für diesen Chip.');
+  rBets.push({ key: b.dataset.bet, amount: rChip }); renderBets();
+};
+$('#rUndo').onclick = () => { if (!rBusy) { rBets.pop(); renderBets(); } };
+$('#rClear').onclick = () => { if (!rBusy) { rBets = []; renderBets(); } };
+$('#rAllIn').onclick = () => {
+  if (rBusy || balance < 1) return toast('Kein Guthaben mehr für All-In.');
+  rBets = [{ key: 'red:0', amount: balance }]; renderBets();
+  toast('Alles auf Rot. Viel Glück!');
+};
+const rHist = [];
+$('#rSpin').onclick = guard(async () => {
+  if (rBusy) return;
+  if (!rBets.length) return toast('Setze zuerst mindestens einen Chip.');
+  const merged = {};
+  rBets.forEach(b => merged[b.key] = (merged[b.key] || 0) + b.amount);
+  const bets = Object.entries(merged).map(([k, amount]) => {
+    const [type, v] = k.split(':'); return { type, value: +v, amount };
+  });
+  rBusy = true; $('#rSpin').disabled = true;
+  let r;
+  try { r = await api('/api/roulette/spin', { bets }); }
+  catch (e) { rBusy = false; $('#rSpin').disabled = false; throw e; }
+  const ball = $('#ball'); $('#rMsg').textContent = '';
+  setBalance(balance - r.bet);
+  let d = 50;
+  for (let i = 0; i < 26; i++) {
+    const n = Math.floor(Math.random() * 37);
+    ball.textContent = n; ball.className = 'ball ' + (n === 0 ? '' : RED.has(n) ? 'red' : 'black');
+    await sleep(d); d = Math.round(d * 1.11);
+  }
+  ball.textContent = r.number; ball.className = 'ball ' + (r.color === 'green' ? '' : r.color);
+  const net = r.payout - r.bet;
+  $('#rMsg').innerHTML = r.payout ? `<span class="pos">Gewinn ${fmt(r.payout)}<br>(${net >= 0 ? '+' : ''}${fmt(net)})</span>` : `<span class="neg">Verloren: ${fmt(r.bet)}</span>`;
+  rHist.unshift([r.number, r.color]); rHist.length = Math.min(rHist.length, 14);
+  $('#rHist').innerHTML = rHist.map(([n, c]) => `<span class="${c === 'green' ? '' : c}">${n}</span>`).join('');
+  setBalance(r.balance);
+  streakToast(r.streak);
+  rBets = []; renderBets(); rBusy = false; $('#rSpin').disabled = false;
+});
+
+/* =========================================================
+   BLACKJACK
+   ========================================================= */
+let bjBet = 25;
+chipBar($('#bjChips'), [5, 10, 25, 50, 100, 250, 500], 25, v => bjBet = v);
+$('#bjChips').insertAdjacentHTML('afterend', '<button class="btn ghost" id="bjAllIn" style="margin-left:8px">All-In</button>');
+$('#bjAllIn').onclick = () => {
+  if (balance < 5) return toast('Zu wenig Guthaben für All-In.');
+  bjBet = Math.min(balance, 1000000);
+  $$('.chip', $('#bjChips')).forEach(c => c.classList.remove('on'));
+  toast(`Einsatz: alles (${fmt(bjBet)}).`);
+};
+const RES = { win: 'Gewinnt', lose: 'Verliert', push: 'Unentschieden', blackjack: 'Blackjack!' };
+function bjRender(s) {
+  const bots = [$('#bjSeatMax'), $('#bjSeatLuna')];
+  if (!s.active) {
+    setCards($('#bjDealer'), []); setCards($('#bjPlayer'), []);
+    bots.forEach(b => { setCards($('.cards', b), []); $('.tot', b).textContent = ''; $('.st', b).textContent = ''; });
+    $('#bjDT').textContent = ''; $('#bjPT').textContent = ''; $('#bjBanner').textContent = '';
+    $('#bjBet').classList.remove('hidden'); $('#bjAct').classList.add('hidden');
+    setBalance(s.balance); return;
+  }
+  setCards($('#bjDealer'), s.dealer);
+  setCards($('#bjPlayer'), s.player);
+  $('#bjDT').textContent = s.phase === 'done' ? s.dealer_total : '';
+  $('#bjPT').textContent = s.player_total;
+  s.bots.forEach((b, i) => {
+    setCards($('.cards', bots[i]), b.hand);
+    $('.tot', bots[i]).textContent = b.total;
+    $('.st', bots[i]).textContent = b.result ? RES[b.result] : '';
+  });
+  const done = s.phase === 'done';
+  $('#bjBet').classList.toggle('hidden', !done);
+  $('#bjAct').classList.toggle('hidden', done);
+  $('#bjStake').textContent = fmt(s.bet);
+  $('#bjDouble').disabled = !s.can_double;
+  const ban = $('#bjBanner');
+  if (done) {
+    const net = s.payout - s.bet;
+    if (s.result === 'blackjack') { ban.textContent = `Blackjack! +${fmt(net)}`; ban.className = 'banner w'; }
+    else if (s.result === 'win') { ban.textContent = `Gewonnen: +${fmt(net)}`; ban.className = 'banner w'; }
+    else if (s.result === 'push') { ban.textContent = 'Unentschieden – Einsatz zurück'; ban.className = 'banner p'; }
+    else { ban.textContent = s.player_total > 21 ? `Über 21 – verloren: −${fmt(s.bet)}` : `Verloren: −${fmt(s.bet)}`; ban.className = 'banner l'; }
+    streakToast(s.streak);
+  } else ban.textContent = '';
+  setBalance(s.balance);
+}
+async function bjLoad() { bjRender(await api('/api/blackjack/state')); }
+$('#bjDeal').onclick = guard(async () => {
+  bjRender(await api('/api/blackjack/start', { bet: bjBet }));
+});
+$$('[data-bj]').forEach(b => b.onclick = guard(async () => {
+  bjRender(await api('/api/blackjack/action', { action: b.dataset.bj }));
+}));
+
+/* =========================================================
+   POKER
+   ========================================================= */
+let pkUnit = 10;
+$('#pkUnit').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  pkUnit = +b.dataset.u; $$('#pkUnit button').forEach(x => x.classList.toggle('on', x === b));
+};
+const STREETS = ['Vor dem Flop', 'Flop', 'Turn', 'River'];
+function pkSeat(el, cards, name, status, cls) {
+  setCards($('.cards', el), cards);
+  el.className = 'seat ' + (cls || '');
+  $('.st', el).textContent = status || '';
+  $('.nm', el).innerHTML = name;
+}
+function pkRender(s) {
+  if (!s.active) {
+    ['#pkMax', '#pkLuna', '#pkYou'].forEach(id => pkSeat($(id), [], id === '#pkYou' ? 'Du' : id.slice(3), ''));
+    setCards($('#pkBoard'), [], 5); $('#pkPot').textContent = 'Pot: 0'; $('#pkBanner').textContent = '';
+    $('#pkLog').innerHTML = '<div>Wähle die Blinds und starte eine Hand.</div>';
+    $('#pkStart').classList.remove('hidden'); $('#pkAct').classList.add('hidden');
+    setBalance(s.balance); return;
+  }
+  const dot = '<span class="dbtn" title="Dealer-Button">D</span>';
+  s.seats.forEach((p, i) => {
+    const status = p.folded ? 'ausgestiegen' : (p.hand_name || (p.bet ? `Einsatz ${p.bet}` : ''));
+    pkSeat($(i ? '#pkLuna' : '#pkMax'), p.cards, `<span>${p.name}</span>${p.dealer ? dot : ''}`, status,
+      (p.folded ? 'out ' : '') + (p.winner ? 'win' : ''));
+  });
+  const yourStatus = s.you_folded ? 'ausgestiegen' : (s.you_hand || '');
+  pkSeat($('#pkYou'), s.you, `<span>Du</span>${s.you_dealer ? dot : ''}`, yourStatus, (s.you_folded ? 'out ' : '') + (s.over && s.you_won ? 'win' : ''));
+  setCards($('#pkBoard'), s.board, 5);
+  $('#pkPot').textContent = `Pot: ${fmt(s.pot)}  ·  ${s.over ? 'Hand beendet' : STREETS[s.street]}`;
+  const ban = $('#pkBanner');
+  if (s.over) {
+    if (s.you_won) { ban.textContent = `Du gewinnst! ${s.net >= 0 ? '+' : ''}${fmt(s.net)}`; ban.className = 'banner w'; }
+    else { ban.textContent = `${s.winners.join(' & ')} gewinnt. Du verlierst ${fmt(-s.net)}`; ban.className = 'banner l'; }
+  } else ban.textContent = '';
+  if (s.over) streakToast(s.streak);
+  $('#pkStart').classList.toggle('hidden', !s.over);
+  $('#pkDeal').textContent = 'Nächste Hand';
+  $('#pkAct').classList.toggle('hidden', !s.your_turn);
+  if (s.your_turn) {
+    $('#pkCall').textContent = s.to_call ? `Mitgehen (${fmt(s.to_call)})` : 'Checken';
+    $('#pkCall').disabled = s.to_call > 0 && !s.can_afford_call;
+    $('#pkRaise').textContent = `${s.to_call ? 'Erhöhen' : 'Setzen'} (+${fmt(s.raise_size)})`;
+    $('#pkRaise').disabled = !s.can_raise;
+  }
+  const log = $('#pkLog');
+  log.innerHTML = s.log.map(l => `<div>${l}</div>`).join(''); log.scrollTop = log.scrollHeight;
+  setBalance(s.balance);
+}
+async function pkLoad() {
+  const s = await api('/api/poker/state');
+  if (s.active && s.unit) { pkUnit = s.unit; $$('#pkUnit button').forEach(x => x.classList.toggle('on', +x.dataset.u === pkUnit)); }
+  pkRender(s);
+}
+$('#pkDeal').onclick = guard(async () => { pkRender(await api('/api/poker/start', { unit: pkUnit })); });
+$$('[data-pk]').forEach(b => b.onclick = guard(async () => {
+  pkRender(await api('/api/poker/action', { action: b.dataset.pk }));
+}));
+
+/* =========================================================
+   WÜRFELN
+   ========================================================= */
+let diceChip = 5, diceBets = [], diceBusy = false;
+chipBar($('#diceChips'), [1, 5, 10, 25, 100], 5, v => diceChip = v);
+(function buildDiceBoard() {
+  let h = '<button class="dtile big-small" data-bet="small:0">KLEIN<small>4–10 · zahlt 1:1</small></button>';
+  h += '<button class="dtile big-small" data-bet="any_triple:0">EIN BELIEBIGES TRIPEL<small>zahlt 30:1</small></button>';
+  h = '<button class="dtile big-small" data-bet="big:0">GROSS<small>11–17 · zahlt 1:1</small></button>' + h;
+  // Reihenfolge: Groß, Klein, dann 6 Zahlen, dann Tripel je Zahl, dann Any-Triple
+  h = '<button class="dtile big-small" data-bet="big:0">GROSS<small>11–17 · zahlt 1:1</small></button>' +
+      '<button class="dtile big-small" data-bet="small:0">KLEIN<small>4–10 · zahlt 1:1</small></button>';
+  for (let n = 1; n <= 6; n++) h += `<button class="dtile numbers" data-bet="number:${n}">${n}<small>je Treffer +1:1</small></button>`;
+  for (let n = 1; n <= 6; n++) h += `<button class="dtile numbers" data-bet="triple:${n}">Tripel ${n}${n}${n}<small>150:1</small></button>`;
+  h += '<button class="dtile big-small" data-bet="any_triple:0">EIN BELIEBIGES TRIPEL<small>30:1</small></button>';
+  $('#diceBoard').innerHTML = h;
+})();
+function renderDiceBets() {
+  $$('#diceBoard .cb').forEach(e => e.remove());
+  const sums = {};
+  diceBets.forEach(b => sums[b.key] = (sums[b.key] || 0) + b.amount);
+  Object.entries(sums).forEach(([k, v]) => {
+    const el = $(`#diceBoard [data-bet="${k}"]`);
+    if (el) el.insertAdjacentHTML('beforeend', `<span class="cb">${v}</span>`);
+  });
+  $('#diceTotal').textContent = fmt(diceBets.reduce((a, b) => a + b.amount, 0));
+}
+$('#diceBoard').onclick = e => {
+  if (diceBusy) return;
+  const b = e.target.closest('[data-bet]'); if (!b) return;
+  const total = diceBets.reduce((a, x) => a + x.amount, 0);
+  if (total + diceChip > balance) return toast('Nicht genug Guthaben für diesen Chip.');
+  diceBets.push({ key: b.dataset.bet, amount: diceChip }); renderDiceBets();
+};
+$('#diceUndo').onclick = () => { if (!diceBusy) { diceBets.pop(); renderDiceBets(); } };
+$('#diceClear').onclick = () => { if (!diceBusy) { diceBets = []; renderDiceBets(); } };
+$('#diceAllIn').onclick = () => {
+  if (diceBusy || balance < 1) return toast('Kein Guthaben mehr für All-In.');
+  diceBets = [{ key: 'big:0', amount: balance }]; renderDiceBets();
+  toast('Alles auf Groß. Viel Glück!');
+};
+$('#diceRoll').onclick = guard(async () => {
+  if (diceBusy) return;
+  if (!diceBets.length) return toast('Setze zuerst mindestens einen Chip.');
+  const merged = {};
+  diceBets.forEach(b => merged[b.key] = (merged[b.key] || 0) + b.amount);
+  const bets = Object.entries(merged).map(([k, amount]) => {
+    const [type, v] = k.split(':'); return { type, value: +v, amount };
+  });
+  diceBusy = true; $('#diceRoll').disabled = true;
+  let r;
+  try { r = await api('/api/dice/spin', { bets }); }
+  catch (e) { diceBusy = false; $('#diceRoll').disabled = false; throw e; }
+  setBalance(balance - r.bet);
+  const dice = $$('#diceRow .die');
+  dice.forEach(d => d.classList.add('roll'));
+  let d = 60;
+  for (let i = 0; i < 12; i++) {
+    dice.forEach(el => el.textContent = 1 + Math.floor(Math.random() * 6));
+    await sleep(d); d = Math.round(d * 1.15);
+  }
+  dice.forEach((el, i) => { el.textContent = r.dice[i]; el.classList.remove('roll'); });
+  const net = r.payout - r.bet;
+  const ban = $('#diceBanner');
+  ban.textContent = r.payout ? `Summe ${r.sum} – Gewinn ${fmt(r.payout)} (${net >= 0 ? '+' : ''}${fmt(net)})` : `Summe ${r.sum} – verloren: −${fmt(r.bet)}`;
+  ban.className = 'banner ' + (net > 0 ? 'w' : net < 0 ? 'l' : 'p');
+  croupier(ban, net, r.streak && r.streak.bonus);
+  streakToast(r.streak);
+  setBalance(r.balance);
+  diceBets = []; renderDiceBets(); diceBusy = false; $('#diceRoll').disabled = false;
+});
+
+/* =========================================================
+   TESTMENÜ (Code -> Regler für beliebige Chip-Beträge)
+   ========================================================= */
+const TEST_MAX = 100000000000;
+let savedCode = '';
+function rangeToAmount(v) {
+  // logarithmische Skala: 0 -> 1, 1000 -> 100 Mrd.
+  return Math.max(1, Math.round(Math.pow(10, (Math.log10(TEST_MAX) * v) / 1000)));
+}
+function amountToRange(a) {
+  a = Math.min(TEST_MAX, Math.max(1, a));
+  return Math.round((Math.log10(a) / Math.log10(TEST_MAX)) * 1000);
+}
+function syncFromRange() {
+  const amt = rangeToAmount(+$('#giveRange').value);
+  $('#giveLabel').textContent = fmt(amt);
+  $('#giveExact').value = amt;
+}
+$('#giveRange').addEventListener('input', syncFromRange);
+$('#giveExact').addEventListener('input', () => {
+  let v = Math.round(+$('#giveExact').value || 1);
+  v = Math.min(TEST_MAX, Math.max(1, v));
+  $('#giveRange').value = amountToRange(v);
+  $('#giveLabel').textContent = fmt(v);
+});
+$$('#testPanel [data-q]').forEach(b => b.onclick = () => {
+  const v = +b.dataset.q;
+  $('#giveExact').value = v; $('#giveRange').value = amountToRange(v); $('#giveLabel').textContent = fmt(v);
+});
+$('#codeBtn').onclick = guard(async () => {
+  const code = $('#codeInput').value.trim();
+  if (!code) return toast('Bitte gib einen Code ein.');
+  $('#codeBtn').disabled = true;
+  try { await api('/api/testgive', { code, amount: 0 }); }
+  catch (e) {
+    $('#codeBtn').disabled = false;
+    if (e.message.includes('nicht gültig')) { $('#codeMsg').innerHTML = `<span class="neg">${e.message}</span>`; return; }
+    throw e;
+  }
+  savedCode = code;
+  $('#codeGate').classList.add('hidden');
+  $('#testPanel').classList.remove('hidden');
+  $('#luckPanel').classList.remove('hidden');
+  $('#streakPanel').classList.remove('hidden');
+  syncFromRange();
+  const me = await api('/api/me');
+  $('#luckRange').value = me.luck > 0 ? me.luck : 50;
+  $('#luckLabel').textContent = $('#luckRange').value;
+  $('#winStreakInput').value = me.win_streak;
+  $('#dailyStreakInput').value = me.daily_streak;
+  toast('Code akzeptiert.', true);
+});
+
+$('#luckRange').addEventListener('input', () => { $('#luckLabel').textContent = $('#luckRange').value; });
+$$('#luckPanel [data-lk]').forEach(b => b.onclick = () => { $('#luckRange').value = b.dataset.lk; $('#luckLabel').textContent = b.dataset.lk; });
+$('#luckBtn').onclick = guard(async () => {
+  $('#luckBtn').disabled = true;
+  let r;
+  try { r = await api('/api/testset', { code: savedCode, luck: +$('#luckRange').value }); }
+  catch (e) { $('#luckBtn').disabled = false; throw e; }
+  $('#luckMsg').innerHTML = `<span class="pos">Glück gesetzt: ${r.luck} %</span>`;
+  toast(`Glück: ${r.luck} %`, true);
+  $('#luckBtn').disabled = false;
+});
+$('#luckOff').onclick = guard(async () => {
+  const r = await api('/api/testset', { code: savedCode, luck: 0 });
+  $('#luckRange').value = 50; $('#luckLabel').textContent = 50;
+  $('#luckMsg').innerHTML = '<span class="pos">Glück ausgeschaltet – normale Regeln.</span>';
+  toast('Glück ausgeschaltet.', true);
+});
+$('#streakBtn').onclick = guard(async () => {
+  const ws = Math.round(+$('#winStreakInput').value || 0);
+  const ds = Math.round(+$('#dailyStreakInput').value || 0);
+  $('#streakBtn').disabled = true;
+  let r;
+  try { r = await api('/api/testset', { code: savedCode, win_streak: ws, daily_streak: ds }); }
+  catch (e) { $('#streakBtn').disabled = false; throw e; }
+  $('#streakMsg').innerHTML = `<span class="pos">Gesetzt: Siegesserie ${r.win_streak}, Tagesserie ${r.daily_streak}</span>`;
+  toast('Serien gesetzt.', true);
+  showAccount(r);
+  $('#streakBtn').disabled = false;
+});
+$('#codeInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('#codeBtn').click(); });
+$('#giveBtn').onclick = guard(async () => {
+  const amount = Math.round(+$('#giveExact').value || 0);
+  if (amount < 1 || amount > TEST_MAX) return toast('Betrag muss zwischen 1 und 100 Mrd. liegen.');
+  $('#giveBtn').disabled = true;
+  let r;
+  try { r = await api('/api/testgive', { code: savedCode, amount }); }
+  catch (e) { $('#giveBtn').disabled = false; throw e; }
+  $('#giveMsg').innerHTML = `<span class="pos">+${fmt(r.given_amount)} Chips gutgeschrieben.</span>`;
+  toast(`+${fmt(r.given_amount)} Chips`, true);
+  showAccount(r);
+  $('#giveBtn').disabled = false;
+});
+
+/* =========================================================
+   KONTO
+   ========================================================= */
+let lbType = 'balance';
+async function loadAccount() {
+  const [h, me] = await Promise.all([api('/api/history'), api('/api/me')]);
+  setBalance(me.balance);
+  $('#stWin').textContent = fmt(me.win_streak);
+  $('#stBest').textContent = fmt(me.best_streak);
+  $('#stDaily').textContent = fmt(me.daily_streak);
+  await loadLB(lbType);
+  $('#hist').innerHTML = h.rows.map(r =>
+    `<tr><td>${esc(r.game)}</td><td class="muted">${esc(r.note || '')}</td><td class="r ${r.delta >= 0 ? 'pos' : 'neg'}">${r.delta >= 0 ? '+' : ''}${fmt(r.delta)}</td><td class="r">${fmt(r.balance_after)}</td></tr>`).join('');
+  $('#rescueBox').classList.toggle('hidden', me.balance >= 5);
+}
+async function loadLB(type) {
+  lbType = type;
+  $$('#lbTabs button').forEach(b => b.classList.toggle('on', b.dataset.t === type));
+  const d = await api('/api/leaderboard?type=' + type);
+  const label = { balance: 'Chips', streak: 'Serie', daily: 'Tage', win: 'Chips' }[type];
+  $('#lb').innerHTML = d.rows.length
+    ? d.rows.map((r, i) => `<tr><td>${i + 1}.</td><td>${esc(r.username)}</td><td class="r">${fmt(r.value)} ${label}</td></tr>`).join('')
+    : '<tr><td class="muted">Noch keine Einträge.</td></tr>';
+}
+$('#lbTabs').onclick = e => { const b = e.target.closest('button'); if (b) loadLB(b.dataset.t); };
+
+$('#rescueBtn').onclick = guard(async () => { const d = await api('/api/rescue', {}); showAccount(d); toast('Notgroschen erhalten.', true); loadAccount(); });
+
+/* Start: vorhandene Sitzung wiederherstellen */
+(async () => {
+  if (!token) return;
+  try { enterApp(await api('/api/me')); } catch (e) { logoutLocal(); }
+})();
+</script>
+</body>
+</html>
