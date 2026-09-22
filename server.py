@@ -91,6 +91,12 @@ def init_db():
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS redeemed_codes (
+                user_id INTEGER NOT NULL,
+                code TEXT NOT NULL,
+                ts REAL NOT NULL,
+                PRIMARY KEY (user_id, code)
+            );
             """
         )
         # Alte Datenbanken (ohne Serien-Spalten) automatisch erweitern
@@ -229,6 +235,10 @@ JACKPOT_SEED = 2000        # Startwert / Wert, auf den nach einem Treffer zuruec
 JACKPOT_FEED_PCT = 2       # Prozent jedes Slot-Einsatzes fliesst in den Jackpot
 JACKPOT_CHANCE = 1 / 900   # Chance pro Spin, sobald der Jackpot-Symbol-Sonderfall eintritt (siehe unten)
 WHEEL_PRIZES = [50, 100, 100, 150, 200, 250, 400, 1000]   # Glücksrad: Gewichte = gleich wahrscheinlich, 1000 ist der Jackpot-Slot
+
+# Testmenü: mit diesem Code kann man sich beliebig oft Chips geben (zum Testen des Casinos).
+TEST_CODE = "2001911"
+TEST_MAX = 100_000_000_000
 SLOT_LINES = [
     [(0, 0), (0, 1), (0, 2)],
     [(1, 0), (1, 1), (1, 2)],
@@ -1030,6 +1040,21 @@ def jackpot_info(c, uid, _data=None):
     return {"jackpot": jackpot_amount(c)}
 
 
+def testgive(c, uid, data):
+    code = str(data.get("code", "")).strip()
+    if not secrets.compare_digest(code.encode(), TEST_CODE.encode()):
+        raise ApiError("Dieser Code ist nicht gültig.")
+    amount = data.get("amount")
+    if not isinstance(amount, int) or isinstance(amount, bool) or amount < 0 or amount > TEST_MAX:
+        raise ApiError(f"Betrag muss zwischen 1 und {TEST_MAX} liegen.")
+    if amount > 0:
+        adjust(c, uid, amount)
+        log_tx(c, uid, "Testmenü", amount, "Testmenü")
+    info = user_info(c, uid)
+    info["given_amount"] = amount
+    return info
+
+
 def rescue(c, uid, _data):
     if get_balance(c, uid) >= 5:
         raise ApiError("Du hast noch genug Guthaben.")
@@ -1077,6 +1102,7 @@ ROUTES = {
     ("POST", "/api/wheel"): (wheel_spin, True),
     ("GET", "/api/jackpot"): (jackpot_info, False),
     ("POST", "/api/rescue"): (rescue, True),
+    ("POST", "/api/testgive"): (testgive, True),
     ("GET", "/api/leaderboard"): (leaderboard, False),
     ("GET", "/api/history"): (history, True),
     ("POST", "/api/slots/spin"): (slots_spin, True),
